@@ -14,50 +14,59 @@ path operator""_p(const char* data, std::size_t sz) {
     return path(data, data + sz);
 }
 
-bool Preprocess(const path& in_file, const path& out_file, const vector<path>& include_directories, const string& file_name){
-    path parent = in_file.parent_path();//для поиска в этой дериктории
+bool Preprocess(const path& file_path, istream& src, ostream& dst, const vector<path>& include_directories){
+    // src поток на чтение файла file_path
+    // dst поток для записи в файл
+    path parent = file_path.parent_path();//для поиска в этой дериктории
     vector<path> directories {include_directories.begin(),include_directories.end()};
     directories.push_back(parent);
     static regex num_reg (R"/(\s*#\s*include\s*"([^"]*)"\s*)/");
     static regex num_reg2 (R"/(\s*#\s*include\s*<([^>]*)>\s*)/");
     smatch m;
-
-    fstream fout(in_file, ios::in);
-     if (fout.is_open()){
-        string buff;
-        size_t line=1;
-        while (getline(fout, buff)){
-            path new_path;
-            size_t count = 0;
-            if ( regex_match(buff, m, num_reg) || regex_match(buff, m, num_reg2)){
-                
-                for (auto dir=directories.rbegin(); dir!=directories.rend(); dir++){
-                    path pare = *dir;
-                    new_path = path(pare.string() + '/' + static_cast<string>(m[1]));
-                    if (!Preprocess(new_path,out_file, include_directories, file_name)){
-                        count++;        
-                    }
+    string buff;
+    size_t line=1;
+    while (getline(src, buff)){
+        path new_path;
+        size_t count = 0;
+        if ( regex_match(buff, m, num_reg) || regex_match(buff, m, num_reg2)){         
+            for (auto dir=directories.rbegin(); dir!=directories.rend(); dir++){
+                path pare = *dir;
+                new_path = path(pare.string() + '/' + static_cast<string>(m[1]));
+                fstream new_src(new_path, ios::in);
+                if(new_src.is_open()){
+                    Preprocess(new_path, new_src, dst, include_directories);
+                }else{
+                    count++;
                 }
-                if (count >= directories.size()){
-                    cout<<"unknown include file "<<new_path.filename().string()<< " at file "<<in_file.string()<<" at line " <<line<<'\n' ;
-                    return false;
-                }
-            } else {  
-                ofstream file_to(out_file, ios::app);
-                file_to<<buff<<'\n'; 
             }
-            line++;
+            if (count >= directories.size()){
+                cout<<"unknown include file "<<new_path.filename().string()<< " at file "<<file_path.string()<<" at line " <<line<<'\n' ;
+                return false;
+            }
+        } else {  
+            dst<<buff<<'\n'; 
         }
-    }else{
-        return false;
+        line++;
     }
     return true;
 }
 
 
+
+
+
 bool Preprocess(const path& in_file, const path& out_file, const vector<path>& include_directories){    
-    bool answer=Preprocess(in_file, out_file, include_directories, in_file.filename().string());
-    return answer;
+    fstream src(in_file, ios::in);
+    //istream src(in_file);
+    if(src.is_open()){
+        fstream dst(out_file, ios::out); 
+        bool answer=Preprocess(in_file, src, dst, include_directories);
+        return answer;
+    }
+    return false;
+    
+
+    
 }
 
 string GetFileContents(string file) {
