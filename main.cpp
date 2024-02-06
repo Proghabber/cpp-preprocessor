@@ -27,19 +27,21 @@ bool Preprocess(const path& file_path, istream& src, ostream& dst, const vector<
     size_t line=1;
     while (getline(src, buff)){
         path new_path;
-        size_t count = 0;
+        size_t mistakes = 0;
         if ( regex_match(buff, m, num_reg) || regex_match(buff, m, num_reg2)){         
             for (auto dir=directories.rbegin(); dir!=directories.rend(); dir++){
                 path pare = *dir;
                 new_path = path(pare.string() + '/' + static_cast<string>(m[1]));
                 fstream new_src(new_path, ios::in);
                 if(new_src.is_open()){
-                    Preprocess(new_path, new_src, dst, include_directories);
+                    if(!Preprocess(new_path, new_src, dst, include_directories)){
+                        mistakes++;
+                    }
                 }else{
-                    count++;
+                    mistakes++;
                 }
             }
-            if (count >= directories.size()){
+            if (mistakes >= directories.size()){
                 cout<<"unknown include file "<<new_path.filename().string()<< " at file "<<file_path.string()<<" at line " <<line<<'\n' ;
                 return false;
             }
