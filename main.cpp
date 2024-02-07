@@ -28,7 +28,7 @@ bool Preprocess(const path& file_path, istream& src, ostream& dst, const vector<
     while (getline(src, buff)){
         path new_path;
         size_t mistakes = 0;
-        if ( regex_match(buff, m, num_reg) || regex_match(buff, m, num_reg2)){         
+        if (regex_match(buff, m, num_reg) || regex_match(buff, m, num_reg2)){         
             for (auto dir=directories.rbegin(); dir!=directories.rend(); dir++){
                 path pare = *dir;
                 new_path = path(pare.string() + '/' + static_cast<string>(m[1]));
